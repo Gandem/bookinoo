@@ -15,3 +15,6 @@
 
 # dep vendor
 vendor
+
+# config file
+config.json
