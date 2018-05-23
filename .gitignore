@@ -19,15 +19,3 @@ vendor
 # config file
 config.json
 
-# Android studio gitignore
-/app/Bookinoo/*.iml
-/app/Bookinoo/*.gradle
-/app/Bookinoo/local.properties
-/app/Bookinoo/.idea/libraries
-/app/Bookinoo/.idea/modules.xml
-/app/Bookinoo/.idea/workspace.xml
-/app/Bookinoo/.DS_Store
-/app/Bookinoo/build
-/app/Bookinoo/captures
-/app/Bookinoo/*.externalNativeBuild
-.DS_STORE
