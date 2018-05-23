@@ -20,13 +20,14 @@ vendor
 config.json
 
 # Android studio gitignore
-*.iml
-*.gradle
-*/local.properties
-*/.idea/libraries
-*/.idea/modules.xml
-*/.idea/workspace.xml
-*.DS_Store
-*/build
-*/captures
-*.externalNativeBuild
+/app/Bookinoo/*.iml
+/app/Bookinoo/*.gradle
+/app/Bookinoo/local.properties
+/app/Bookinoo/.idea/libraries
+/app/Bookinoo/.idea/modules.xml
+/app/Bookinoo/.idea/workspace.xml
+/app/Bookinoo/.DS_Store
+/app/Bookinoo/build
+/app/Bookinoo/captures
+/app/Bookinoo/*.externalNativeBuild
+.DS_STORE
