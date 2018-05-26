@@ -56,25 +56,23 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
+	r.GET("/search", func(c *gin.Context) {
+		query := c.Query("q")
+
+		uri := fmt.Sprintf("%ssearch/index.xml?key=%s&q=%s", apiRoot, conf.GoodreadsAPIKey, url.QueryEscape(query))
+
+		xml := getRequest(uri)
+
+		response := &SearchResponse{}
+		xmlUnmarshal(xml, response)
+
 		c.JSON(200, gin.H{
-			"message": "pong",
+			"message": response,
 		})
 	})
 	go func() {
 		r.Run()
 	}()
-
-	query := "Darker Shade"
-
-	uri := fmt.Sprintf("%ssearch/index.xml?key=%s&q=%s", apiRoot, conf.GoodreadsAPIKey, url.QueryEscape(query))
-
-	xml := getRequest(uri)
-
-	response := &SearchResponse{}
-	xmlUnmarshal(xml, response)
-
-	fmt.Println(response)
 
 	<-appExit
 }
