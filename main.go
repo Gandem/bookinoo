@@ -4,10 +4,14 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
+
+	log "github.com/cihub/seelog"
+	"github.com/gin-gonic/gin"
 )
+
+var appExit chan bool
 
 const (
 	apiRoot = "http://www.goodreads.com/"
@@ -32,8 +36,34 @@ type SearchResponse struct {
 	Books []GoodreadsBook `xml:"search>results>work>best_book"`
 }
 
+func init() {
+	// Initalize exit channel
+	appExit = make(chan bool)
+}
+
+func fatalf(str string, err error) {
+	log.Criticalf(str, err)
+	log.Flush()
+	appExit <- true
+}
+
 func main() {
-	conf := readConfig("config.json")
+	// Read the configuration file
+	conf, err := readConfig("config.json")
+
+	if err != nil {
+		fatalf("Error reading config file: %s", err)
+	}
+
+	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+	go func() {
+		r.Run()
+	}()
 
 	query := "Darker Shade"
 
@@ -45,18 +75,20 @@ func main() {
 	xmlUnmarshal(xml, response)
 
 	fmt.Println(response)
+
+	<-appExit
 }
 
 func getRequest(uri string) []byte {
 	res, err := http.Get(uri)
 	if err != nil {
-		log.Fatal(err)
+		fatalf("Could not get the HTTP request: %s", err)
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
-		log.Fatal(err)
+		fatalf("Could not get the HTTP Body: %s", err)
 	}
 
 	return body
@@ -65,6 +97,6 @@ func getRequest(uri string) []byte {
 func xmlUnmarshal(b []byte, i interface{}) {
 	err := xml.Unmarshal(b, i)
 	if err != nil {
-		log.Fatal(err)
+		fatalf("Could not parse the returned XML: %s", err)
 	}
 }

@@ -3,22 +3,22 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 )
 
 type apiConfig struct {
 	GoodreadsAPIKey string `json:"goodreads_api_key"`
 }
 
-func readConfig(path string) *apiConfig {
+func readConfig(path string) (*apiConfig, error) {
+	conf := &apiConfig{}
+
 	buf, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		log.Fatal(err)
+		return conf, err
 	}
 
-	conf := &apiConfig{}
 	json.Unmarshal(buf, conf)
 
-	return conf
+	return conf, nil
 }
