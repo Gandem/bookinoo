@@ -4,10 +4,23 @@ import (
 	"encoding/xml"
 	"io/ioutil"
 	"net/http"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/gin-gonic/gin"
 )
+
+type reviewsGroup struct {
+	Platform      string
+	URL           string
+	Reviews       string
+	ReviewsType   string
+	AverageRating string
+}
+
+type reviewBackend interface {
+	query(isbn string) reviewsGroup
+}
 
 var (
 	appExit   chan bool
@@ -34,23 +47,58 @@ func fatalf(str string, err error) {
 
 func main() {
 	r := gin.Default()
+
 	r.GET("/search", func(c *gin.Context) {
 		query := c.Query("q")
 
-		goodreadsXML := getRequest(goodreadsSearchURL(query))
-		amazonXML := getRequest(amazonSearchURL(query))
+		// TODO:
+		amazonXML, _ := getRequest(amazonSearchURL(query))
 
-		goodreadsResponse := &GoodreadsSearchResponse{}
-		xmlUnmarshal(goodreadsXML, goodreadsResponse)
-
-		amazonResponse := &AmazonItemSearchResponse{}
+		amazonResponse := &AmazonSearchResponse{}
 		xmlUnmarshal(amazonXML, amazonResponse)
 
 		c.JSON(200, gin.H{
-			"goodreads": goodreadsResponse,
-			"amazon":    amazonResponse,
+			"books": amazonResponse.Items,
 		})
 	})
+
+	reviewBackends := [2]reviewBackend{
+		AmazonReviewBackend{},
+		GoodreadsReviewBackend{},
+	}
+
+	r.GET("/reviews", func(c *gin.Context) {
+		isbn := c.Query("ISBN")
+		reviewsChan := make(chan reviewsGroup)
+		wg := sync.WaitGroup{}
+
+		for _, backend := range reviewBackends {
+			wg.Add(1)
+			go func(backend reviewBackend) {
+				reviewsChan <- backend.query(isbn)
+				wg.Done()
+			}(backend)
+		}
+		reviews := make([]reviewsGroup, 0)
+
+		done := make(chan bool)
+		go func() {
+			for rg := range reviewsChan {
+				if rg != (reviewsGroup{}) {
+					reviews = append(reviews, rg)
+				}
+			}
+			done <- true
+		}()
+		wg.Wait()
+		close(reviewsChan)
+		<-done
+
+		c.JSON(200, gin.H{
+			"reviews": reviews,
+		})
+	})
+
 	go func() {
 		r.Run()
 	}()
@@ -58,7 +106,7 @@ func main() {
 	<-appExit
 }
 
-func getRequest(uri string) []byte {
+func getRequest(uri string) ([]byte, int) {
 	res, err := http.Get(uri)
 	if err != nil {
 		fatalf("Could not get the HTTP request: %s", err)
@@ -70,7 +118,7 @@ func getRequest(uri string) []byte {
 		fatalf("Could not get the HTTP Body: %s", err)
 	}
 
-	return body
+	return body, res.StatusCode
 }
 
 func xmlUnmarshal(b []byte, i interface{}) {

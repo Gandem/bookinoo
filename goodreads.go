@@ -30,3 +30,35 @@ func goodreadsSearchURL(query string) string {
 		appConfig.GoodreadsAPIKey,
 		url.QueryEscape(query))
 }
+
+type GoodreadsReviewItem struct {
+	URL           string `xml:"book>url"`
+	Reviews       string `xml:"book>reviews_widget"`
+	AverageRating string `xml:"book>average_rating"`
+}
+type GoodreadsReviewBackend struct{}
+
+func (GoodreadsReviewBackend) query(isbn string) reviewsGroup {
+	uri := fmt.Sprintf("https://%s/book/isbn/%s?key=%s",
+		appConfig.GoodreadsAPIRoot,
+		url.QueryEscape(isbn),
+		appConfig.GoodreadsAPIKey,
+	)
+
+	goodreadsResponse := &GoodreadsReviewItem{}
+	goodreadsReviewXML, statusCode := getRequest(uri)
+
+	if statusCode == 404 {
+		return reviewsGroup{}
+	}
+
+	xmlUnmarshal(goodreadsReviewXML, goodreadsResponse)
+
+	return reviewsGroup{
+		Platform:      "goodreads",
+		URL:           goodreadsResponse.URL,
+		Reviews:       goodreadsResponse.Reviews,
+		ReviewsType:   "html",
+		AverageRating: goodreadsResponse.AverageRating,
+	}
+}

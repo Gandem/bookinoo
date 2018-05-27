@@ -4,45 +4,17 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/xml"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 )
 
-type AmazonItem struct {
-	ASIN             string
-	ParentASIN       string
-	DetailPageURL    string
-	SalesRank        string
-	ItemLinks        []AmazonItemLink `xml:"ItemLinks>ItemLink"`
-	SmallImage       AmazonImage
-	MediumImage      AmazonImage
-	LargeImage       AmazonImage
-	ImageSets        []AmazonImageSet `xml:"ImageSets>ImageSet"`
-	ItemAttributes   AmazonItemAttributes
-	EditorialReviews []AmazonEditorialReview `xml:"EditorialReviews>EditorialReview"`
-}
-
-type AmazonEditorialReview struct {
-	Source  string
-	Content string
-}
-
-type AmazonItemLink struct {
-	Description string
-	URL         string
-}
-
-type AmazonImageSet struct {
-	Category       string `xml:"Category,attr"`
-	SwatchImage    AmazonImage
-	SmallImage     AmazonImage
-	ThumbnailImage AmazonImage
-	TinyImage      AmazonImage
-	MediumImage    AmazonImage
-	LargeImage     AmazonImage
+type AmazonSearchItem struct {
+	ISBN   string      `xml:"ASIN"`
+	Title  string      `xml:"ItemAttributes>Title"`
+	Author string      `xml:"ItemAttributes>Author"`
+	Image  AmazonImage `xml:"MediumImage"`
 }
 
 type AmazonImage struct {
@@ -51,32 +23,16 @@ type AmazonImage struct {
 	Width  uint16
 }
 
-type AmazonItemAttributes struct {
-	Title     string
-	Brand     string
-	ListPrice AmazonItemPrice
-}
-
-type AmazonItemPrice struct {
-	Amount         int64
-	CurrencyCode   string
-	FormattedPrice string
-}
-
-type AmazonItems struct {
-	Items []AmazonItem `xml:"Item"`
-}
-
-type AmazonItemSearchResponse struct {
-	XMLName     xml.Name    `xml:"ItemSearchResponse"`
-	AmazonItems AmazonItems `xml:"Items"`
+type AmazonSearchResponse struct {
+	Items []AmazonSearchItem `xml:"Items>Item"`
 }
 
 func amazonSearchURL(query string) string {
 	params := url.Values{
-		"Operation":   []string{"ItemSearch"},
-		"SearchIndex": []string{"Books"},
-		"Keywords":    []string{query},
+		"Operation":     []string{"ItemSearch"},
+		"SearchIndex":   []string{"Books"},
+		"Keywords":      []string{query},
+		"ResponseGroup": []string{"Images,ItemAttributes"},
 	}
 
 	merged := mergeParams(params)
@@ -115,4 +71,43 @@ func sign(message string) string {
 	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte(message))
 	return base64.StdEncoding.EncodeToString((mac.Sum(nil)))
+}
+
+type AmazonReviewItem struct {
+	URL     string `xml:"Items>Item>DetailPageURL"`
+	Reviews string `xml:"Items>Item>CustomerReviews>IFrameURL"`
+}
+
+type AmazonReviewBackend struct{}
+
+func (AmazonReviewBackend) query(isbn string) reviewsGroup {
+	params := url.Values{
+		"Operation":     []string{"ItemLookup"},
+		"SearchIndex":   []string{"Books"},
+		"ItemId":        []string{isbn},
+		"IdType":        []string{"ISBN"},
+		"ResponseGroup": []string{"Large"},
+	}
+
+	merged := mergeParams(params)
+
+	url := url.URL{
+		Scheme:   "https",
+		Host:     appConfig.AmazonAPIRoot,
+		Path:     "/onca/xml",
+		RawQuery: merged.Encode(),
+	}
+
+	amazonResponse := &AmazonReviewItem{}
+	// TODO:
+	amazonReviewsXML, _ := getRequest(url.String())
+	xmlUnmarshal(amazonReviewsXML, amazonResponse)
+
+	return reviewsGroup{
+		Platform:      "amazon",
+		URL:           amazonResponse.URL,
+		Reviews:       amazonResponse.Reviews,
+		ReviewsType:   "url",
+		AverageRating: "-1",
+	}
 }
