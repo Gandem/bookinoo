@@ -4,11 +4,73 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/xml"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 )
+
+type AmazonItem struct {
+	ASIN             string
+	ParentASIN       string
+	DetailPageURL    string
+	SalesRank        string
+	ItemLinks        []AmazonItemLink `xml:"ItemLinks>ItemLink"`
+	SmallImage       AmazonImage
+	MediumImage      AmazonImage
+	LargeImage       AmazonImage
+	ImageSets        []AmazonImageSet `xml:"ImageSets>ImageSet"`
+	ItemAttributes   AmazonItemAttributes
+	EditorialReviews []AmazonEditorialReview `xml:"EditorialReviews>EditorialReview"`
+}
+
+type AmazonEditorialReview struct {
+	Source  string
+	Content string
+}
+
+type AmazonItemLink struct {
+	Description string
+	URL         string
+}
+
+type AmazonImageSet struct {
+	Category       string `xml:"Category,attr"`
+	SwatchImage    AmazonImage
+	SmallImage     AmazonImage
+	ThumbnailImage AmazonImage
+	TinyImage      AmazonImage
+	MediumImage    AmazonImage
+	LargeImage     AmazonImage
+}
+
+type AmazonImage struct {
+	URL    string
+	Height uint16
+	Width  uint16
+}
+
+type AmazonItemAttributes struct {
+	Title     string
+	Brand     string
+	ListPrice AmazonItemPrice
+}
+
+type AmazonItemPrice struct {
+	Amount         int64
+	CurrencyCode   string
+	FormattedPrice string
+}
+
+type AmazonItems struct {
+	Items []AmazonItem `xml:"Item"`
+}
+
+type AmazonItemSearchResponse struct {
+	XMLName     xml.Name    `xml:"ItemSearchResponse"`
+	AmazonItems AmazonItems `xml:"Items"`
+}
 
 func amazonSearchURL(query string) string {
 	params := url.Values{
