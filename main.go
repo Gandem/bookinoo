@@ -11,11 +11,71 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var appExit chan bool
-
-const (
-	apiRoot = "http://www.goodreads.com/"
+var (
+	appExit   chan bool
+	appConfig *apiConfig
 )
+
+type AmazonItem struct {
+	ASIN             string
+	ParentASIN       string
+	DetailPageURL    string
+	SalesRank        string
+	ItemLinks        []AmazonItemLink `xml:"ItemLinks>ItemLink"`
+	SmallImage       AmazonImage
+	MediumImage      AmazonImage
+	LargeImage       AmazonImage
+	ImageSets        []AmazonImageSet `xml:"ImageSets>ImageSet"`
+	ItemAttributes   AmazonItemAttributes
+	EditorialReviews []AmazonEditorialReview `xml:"EditorialReviews>EditorialReview"`
+}
+
+type AmazonEditorialReview struct {
+	Source  string
+	Content string
+}
+
+type AmazonItemLink struct {
+	Description string
+	URL         string
+}
+
+type AmazonImageSet struct {
+	Category       string `xml:"Category,attr"`
+	SwatchImage    AmazonImage
+	SmallImage     AmazonImage
+	ThumbnailImage AmazonImage
+	TinyImage      AmazonImage
+	MediumImage    AmazonImage
+	LargeImage     AmazonImage
+}
+
+type AmazonImage struct {
+	URL    string
+	Height uint16
+	Width  uint16
+}
+
+type AmazonItemAttributes struct {
+	Title     string
+	Brand     string
+	ListPrice AmazonItemPrice
+}
+
+type AmazonItemPrice struct {
+	Amount         int64
+	CurrencyCode   string
+	FormattedPrice string
+}
+
+type AmazonItems struct {
+	Items []AmazonItem `xml:"Item"`
+}
+
+type AmazonItemSearchResponse struct {
+	XMLName     xml.Name    `xml:"ItemSearchResponse"`
+	AmazonItems AmazonItems `xml:"Items"`
+}
 
 // GoodreadsAuthor represents an author as returned by the Goodreads API
 type GoodreadsAuthor struct {
@@ -32,13 +92,20 @@ type GoodreadsBook struct {
 }
 
 // SearchResponse represents a response to a search query as returned by the Goodreads API
-type SearchResponse struct {
+type GoodreadsSearchResponse struct {
 	Books []GoodreadsBook `xml:"search>results>work>best_book"`
 }
 
 func init() {
 	// Initalize exit channel
 	appExit = make(chan bool)
+
+	var err error
+	// Read the configuration file
+	appConfig, err = readConfig("config.json")
+	if err != nil {
+		fatalf("Error reading config file: %s", err)
+	}
 }
 
 func fatalf(str string, err error) {
@@ -48,26 +115,24 @@ func fatalf(str string, err error) {
 }
 
 func main() {
-	// Read the configuration file
-	conf, err := readConfig("config.json")
-
-	if err != nil {
-		fatalf("Error reading config file: %s", err)
-	}
-
 	r := gin.Default()
 	r.GET("/search", func(c *gin.Context) {
 		query := c.Query("q")
 
-		uri := fmt.Sprintf("%ssearch/index.xml?key=%s&q=%s", apiRoot, conf.GoodreadsAPIKey, url.QueryEscape(query))
+		uri := fmt.Sprintf("https://%s/search/index.xml?key=%s&q=%s", appConfig.GoodreadsAPIRoot, appConfig.GoodreadsAPIKey, url.QueryEscape(query))
 
-		xml := getRequest(uri)
+		goodreadsXML := getRequest(uri)
+		amazonXML := getRequest(amazonSearchURL(query))
 
-		response := &SearchResponse{}
-		xmlUnmarshal(xml, response)
+		goodreadsResponse := &GoodreadsSearchResponse{}
+		xmlUnmarshal(goodreadsXML, goodreadsResponse)
+
+		amazonResponse := &AmazonItemSearchResponse{}
+		xmlUnmarshal(amazonXML, amazonResponse)
 
 		c.JSON(200, gin.H{
-			"message": response,
+			"goodreads": goodreadsResponse,
+			"amazon":    amazonResponse,
 		})
 	})
 	go func() {

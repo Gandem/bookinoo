@@ -1,3 +1,8 @@
 {
-    "goodreads_api_key": ""
+    "goodreads_api_key": "",
+    "goodreads_api_rooturl": "",
+    "amazon_access_key": "",
+    "amazon_secret_key": "",
+    "amazon_associate_id": "",
+    "amazon_api_rooturl": ""
 }
