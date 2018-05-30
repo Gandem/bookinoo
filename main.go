@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/DataDog/dd-trace-go/tracer/contrib/gin-gonic/gintrace"
 	log "github.com/cihub/seelog"
 	"github.com/gin-gonic/gin"
 )
@@ -47,6 +48,8 @@ func fatalf(str string, err error) {
 
 func main() {
 	r := gin.Default()
+
+	r.Use(gintrace.Middleware("bookinoo"))
 
 	r.GET("/search", func(c *gin.Context) {
 		query := c.Query("q")
