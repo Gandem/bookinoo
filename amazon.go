@@ -78,7 +78,13 @@ type AmazonReviewItem struct {
 	Reviews string `xml:"Items>Item>CustomerReviews>IFrameURL"`
 }
 
-type AmazonReviewBackend struct{}
+type AmazonReviewBackend struct {
+	name string
+}
+
+func (a AmazonReviewBackend) getName() string {
+	return a.name
+}
 
 func (AmazonReviewBackend) query(isbn string) reviewsGroup {
 	params := url.Values{

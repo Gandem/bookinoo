@@ -36,7 +36,13 @@ type GoodreadsReviewItem struct {
 	Reviews       string `xml:"book>reviews_widget"`
 	AverageRating string `xml:"book>average_rating"`
 }
-type GoodreadsReviewBackend struct{}
+type GoodreadsReviewBackend struct {
+	name string
+}
+
+func (g GoodreadsReviewBackend) getName() string {
+	return g.name
+}
 
 func (GoodreadsReviewBackend) query(isbn string) reviewsGroup {
 	uri := fmt.Sprintf("https://%s/book/isbn/%s?key=%s",

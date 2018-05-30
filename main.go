@@ -22,6 +22,7 @@ type reviewsGroup struct {
 
 type reviewBackend interface {
 	query(isbn string) reviewsGroup
+	getName() string
 }
 
 var (
@@ -55,8 +56,8 @@ func main() {
 	r.GET("/search", func(c *gin.Context) {
 		query := c.Query("q")
 
-		// TODO:
 		amazonQuerySpan := tracer.NewChildSpanFromContext("amazon.query", c.Request.Context())
+		// TODO:
 		amazonXML, _ := getRequest(amazonSearchURL(query))
 		amazonQuerySpan.Finish()
 
@@ -72,8 +73,12 @@ func main() {
 	})
 
 	reviewBackends := [2]reviewBackend{
-		AmazonReviewBackend{},
-		GoodreadsReviewBackend{},
+		AmazonReviewBackend{
+			name: "amazon",
+		},
+		GoodreadsReviewBackend{
+			name: "goodreads",
+		},
 	}
 
 	r.GET("/reviews", func(c *gin.Context) {
@@ -84,7 +89,9 @@ func main() {
 		for _, backend := range reviewBackends {
 			wg.Add(1)
 			go func(backend reviewBackend) {
+				backendReviewTrace := tracer.NewChildSpanFromContext(backend.getName()+".query", c.Request.Context())
 				reviewsChan <- backend.query(isbn)
+				backendReviewTrace.Finish()
 				wg.Done()
 			}(backend)
 		}
