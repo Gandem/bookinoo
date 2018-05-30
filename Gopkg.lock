@@ -2,10 +2,10 @@
 
 
 [[projects]]
+  branch = "master"
   name = "github.com/DataDog/dd-trace-go"
-  packages = ["tracer","tracer/contrib/gin-gonic/gintrace","tracer/ext"]
-  revision = "27617015d45e6cd550b9a7ac7715c37cc2f7d020"
-  version = "v0.6.1"
+  packages = ["contrib/gin-gonic/gin","tracer","tracer/ext"]
+  revision = "af33fed82ebd0d26c598ae0b09da3018edceaefe"
 
 [[projects]]
   name = "github.com/cihub/seelog"
@@ -80,6 +80,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5c02dffb71c71be379e09d88a649b66d26c2890345e1064386cfb003535b47f0"
+  inputs-digest = "fa68d916e4c6d5ecf55e2a35f8c1ee594dfc00d500ee52d6a1a67c4e76b378a8"
   solver-name = "gps-cdcl"
   solver-version = 1

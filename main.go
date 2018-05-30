@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"sync"
 
+	gintrace "github.com/DataDog/dd-trace-go/contrib/gin-gonic/gin"
 	"github.com/DataDog/dd-trace-go/tracer"
-	"github.com/DataDog/dd-trace-go/tracer/contrib/gin-gonic/gintrace"
 	log "github.com/cihub/seelog"
 	"github.com/gin-gonic/gin"
 )
