@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/DataDog/dd-trace-go/tracer"
 	"github.com/DataDog/dd-trace-go/tracer/contrib/gin-gonic/gintrace"
 	log "github.com/cihub/seelog"
 	"github.com/gin-gonic/gin"
@@ -55,10 +56,15 @@ func main() {
 		query := c.Query("q")
 
 		// TODO:
+		amazonQuerySpan := tracer.NewChildSpanFromContext("amazon.query", c.Request.Context())
 		amazonXML, _ := getRequest(amazonSearchURL(query))
+		amazonQuerySpan.Finish()
 
 		amazonResponse := &AmazonSearchResponse{}
+
+		xmlUnmarshalSpan := tracer.NewChildSpanFromContext("xml.unmarshal", c.Request.Context())
 		xmlUnmarshal(amazonXML, amazonResponse)
+		xmlUnmarshalSpan.Finish()
 
 		c.JSON(200, gin.H{
 			"books": amazonResponse.Items,
